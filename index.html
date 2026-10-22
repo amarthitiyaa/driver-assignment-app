@@ -252,10 +252,9 @@
 
         let changedSlots = {};
         let sapLogs = [];
-        let selectedCarFilters = [];
+        let selectedCarFilters = []; // empty means all selected
 
         window.onload = function() {
-            // Check login session
             if(sessionStorage.getItem('isLoggedIn') === 'true') {
                 document.getElementById('login-screen').classList.add('hidden');
             }
@@ -297,7 +296,6 @@
         }
 
         function submitPasswordResetRequest() {
-            const reason = document.getElementById('reset-reason').value;
             closeResetModal();
             showToast("ส่งคำขอไปยังเมล arthitiyaammer@gmail.com เรียบร้อยแล้ว");
         }
@@ -313,36 +311,37 @@
 
         function initCarCheckboxes() {
             const allCarNos = [...new Set(vehicles.map(v => v.carNo))].sort((a,b) => a.localeCompare(b, 'th', {numeric: true}));
-            renderCarCheckboxItems(allCarNos);
+            renderCarCheckboxItems(allCarNos, "");
             updateCarDropdownLabel();
         }
 
-        function renderCarCheckboxItems(carNos) {
+        function renderCarCheckboxItems(carNos, query = "") {
             const container = document.getElementById('car-checkbox-list');
             container.innerHTML = '';
             
-            if (carNos.length === 0) {
+            const filtered = carNos.filter(c => c.toLowerCase().includes(query.toLowerCase()));
+
+            if (filtered.length === 0) {
                 container.innerHTML = `<div class="text-xs text-slate-400 text-center py-2">ไม่พบเบอร์รถ</div>`;
                 return;
             }
 
-            carNos.forEach(carNo => {
+            filtered.forEach(carNo => {
                 const isChecked = selectedCarFilters.length === 0 || selectedCarFilters.includes(carNo);
                 const label = document.createElement('label');
-                label.className = "flex items-center space-x-2.5 text-sm text-slate-700 hover:bg-slate-50 p-1.5 rounded-lg cursor-pointer car-item-label";
+                label.className = "flex items-center space-x-2.5 text-sm text-slate-700 hover:bg-slate-50 p-1.5 rounded-lg cursor-pointer";
                 label.innerHTML = `
                     <input type="checkbox" value="${carNo}" ${isChecked ? 'checked' : ''} onchange="onCarCheckboxChange(this)" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
-                    <span>รถเบอร์ ${carNo}</span>
+                    <span>${carNo}</span>
                 `;
                 container.appendChild(label);
             });
         }
 
         function filterCarCheckboxList() {
-            const query = document.getElementById('car-search-input').value.toLowerCase();
+            const query = document.getElementById('car-search-input').value;
             const allCarNos = [...new Set(vehicles.map(v => v.carNo))].sort((a,b) => a.localeCompare(b, 'th', {numeric: true}));
-            const filtered = allCarNos.filter(c => c.toLowerCase().includes(query));
-            renderCarCheckboxItems(filtered);
+            renderCarCheckboxItems(allCarNos, query);
         }
 
         function toggleCarDropdown(e) {
@@ -377,8 +376,8 @@
             } else {
                 selectedCarFilters = ['__none__'];
             }
-            const checkboxes = document.querySelectorAll('#car-checkbox-list input[type="checkbox"]');
-            checkboxes.forEach(cb => cb.checked = select);
+            const query = document.getElementById('car-search-input').value;
+            renderCarCheckboxItems(allCarNos, query);
             updateCarDropdownLabel();
             renderApp();
         }
@@ -389,7 +388,7 @@
             if (selectedCarFilters.length === 0) {
                 label.innerText = "ทั้งหมด";
             } else if (selectedCarFilters.length === 1 && selectedCarFilters[0] !== '__none__') {
-                label.innerText = `รถเบอร์ ${selectedCarFilters[0]}`;
+                label.innerText = `${selectedCarFilters[0]}`;
             } else if (selectedCarFilters.length === allCarNos.length) {
                 label.innerText = "ทั้งหมด";
             } else if (selectedCarFilters[0] === '__none__' || selectedCarFilters.length === 0) {
