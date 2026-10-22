@@ -250,9 +250,9 @@
             { name: "ชาญชัย โพธิ์ศรี", sap: "1000006899" }
         ];
 
-        let changedSlots = {};
+        let changedSlots = {}; // stores badge text e.g. "เดิม 316" or "เดิม: สำรอง"
         let sapLogs = [];
-        let selectedCarFilters = []; // empty means all selected
+        let selectedCarFilters = [];
 
         window.onload = function() {
             if(sessionStorage.getItem('isLoggedIn') === 'true') {
@@ -433,11 +433,11 @@
                 for (let dIdx = 0; dIdx < 3; dIdx++) {
                     const drv = veh.drivers[dIdx];
                     const slotKey = `${cIdx}_${dIdx}`;
-                    const isChanged = changedSlots[slotKey];
-                    if (isChanged) sapCount++;
+                    const badgeText = changedSlots[slotKey];
+                    if (badgeText) sapCount++;
 
                     let slotClass = "border rounded-xl p-3 min-h-[60px] transition cursor-pointer relative ";
-                    if (isChanged) {
+                    if (badgeText) {
                         slotClass += "border-amber-400 bg-amber-50/80 shadow-xs";
                     } else {
                         slotClass += "border-slate-200 bg-slate-50/60 hover:border-slate-300";
@@ -461,7 +461,7 @@
                                     <p class="text-[11px] text-slate-500 font-mono">SAP: ${drv.sap || '-'}</p>
                                 </div>
                                 <div class="flex items-center space-x-1">
-                                    ${isChanged ? '<span class="bg-amber-200 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-bold">เปลี่ยน</span>' : ''}
+                                    ${badgeText ? `<span class="bg-amber-200 text-amber-900 text-[10px] px-1.5 py-0.5 rounded font-bold">${badgeText}</span>` : ''}
                                     <button onclick="removeDriverFromCar(${cIdx}, ${dIdx})" class="text-slate-400 hover:text-red-600 p-1" title="ถอดออก"><i class="fa-solid fa-xmark text-xs"></i></button>
                                 </div>
                             </div>
@@ -516,12 +516,25 @@
         let draggedData = null;
 
         function dragVehicleDriver(e, cIdx, dIdx) {
-            draggedData = { type: 'vehicle', cIdx, dIdx, driver: vehicles[cIdx].drivers[dIdx], sourceDesc: `รถเบอร์ ${vehicles[cIdx].carNo} (พพร.${dIdx+1})` };
+            draggedData = { 
+                type: 'vehicle', 
+                cIdx, 
+                dIdx, 
+                driver: vehicles[cIdx].drivers[dIdx], 
+                sourceCarNo: vehicles[cIdx].carNo,
+                sourceDesc: `รถเบอร์ ${vehicles[cIdx].carNo}` 
+            };
             e.dataTransfer.setData('text/plain', JSON.stringify(draggedData));
         }
 
         function dragReserveDriver(e, rIdx) {
-            draggedData = { type: 'reserve', rIdx, driver: reservePool[rIdx], sourceDesc: `คลังพนักงานสำรอง` };
+            draggedData = { 
+                type: 'reserve', 
+                rIdx, 
+                driver: reservePool[rIdx], 
+                sourceCarNo: 'สำรอง',
+                sourceDesc: `คลังพนักงานสำรอง` 
+            };
             e.dataTransfer.setData('text/plain', JSON.stringify(draggedData));
         }
 
@@ -541,7 +554,10 @@
 
             const targetCar = vehicles[targetCIdx];
             const oldTargetDriver = targetCar.drivers[targetDIdx];
-            const sourceInfo = draggedData.sourceDesc;
+            const originCarNo = draggedData.sourceCarNo;
+
+            // กำหนดข้อความป้าย เช่น "เดิม 316" หรือ "เดิม: สำรอง"
+            const badgeLabel = (originCarNo === 'สำรอง') ? 'เดิม: สำรอง' : `เดิม ${originCarNo}`;
 
             if (draggedData.type === 'vehicle') {
                 const srcCar = vehicles[draggedData.cIdx];
@@ -550,9 +566,9 @@
                 targetCar.drivers[targetDIdx] = srcCar.drivers[srcDIdx];
                 srcCar.drivers[srcDIdx] = oldTargetDriver;
 
-                changedSlots[`${targetCIdx}_${targetDIdx}`] = true;
+                changedSlots[`${targetCIdx}_${targetDIdx}`] = badgeLabel;
                 if (oldTargetDriver.name) {
-                    changedSlots[`${draggedData.cIdx}_${srcDIdx}`] = true;
+                    changedSlots[`${draggedData.cIdx}_${srcDIdx}`] = `เดิม ${targetCar.carNo}`;
                 }
 
                 logSapAction(`ย้าย ${targetCar.drivers[targetDIdx].name} จากรถเบอร์ ${srcCar.carNo} มาลงรถเบอร์ ${targetCar.carNo} (พพร.${targetDIdx+1})`);
@@ -564,7 +580,7 @@
                 targetCar.drivers[targetDIdx] = draggedData.driver;
                 reservePool.splice(draggedData.rIdx, 1);
 
-                changedSlots[`${targetCIdx}_${targetDIdx}`] = true;
+                changedSlots[`${targetCIdx}_${targetDIdx}`] = badgeLabel;
                 logSapAction(`นำพนักงานสำรอง ${draggedData.driver.name} (SAP: ${draggedData.driver.sap}) มาลงรถเบอร์ ${targetCar.carNo} (พพร.${targetDIdx+1})`);
 
                 if (oldTargetDriver.name) {
@@ -576,7 +592,7 @@
             const driverName = targetCar.drivers[targetDIdx].name;
             draggedData = null;
             renderApp();
-            showToast(`ย้าย ${driverName} สำเร็จ (เดิมเคยอยู่: ${sourceInfo})`);
+            showToast(`ย้าย ${driverName} สำเร็จ (${badgeLabel})`);
         }
 
         function dropToReserve(e) {
@@ -587,19 +603,18 @@
             const srcCar = vehicles[draggedData.cIdx];
             const srcDIdx = draggedData.dIdx;
             const removedDriver = srcCar.drivers[srcDIdx];
-            const sourceInfo = draggedData.sourceDesc;
 
             if (!removedDriver.name) return;
 
             srcCar.drivers[srcDIdx] = { name: "", sap: "" };
             reservePool.push(removedDriver);
 
-            changedSlots[`${draggedData.cIdx}_${srcDIdx}`] = true;
+            changedSlots[`${draggedData.cIdx}_${srcDIdx}`] = `เดิม ${srcCar.carNo}`;
             logSapAction(`ถอด ${removedDriver.name} ออกจากรถเบอร์ ${srcCar.carNo} (พพร.${srcDIdx+1}) ไปยังคลังสำรอง`);
 
             draggedData = null;
             renderApp();
-            showToast(`ส่ง ${removedDriver.name} เข้าคลังสำรองแล้ว (เดิมเคยอยู่: ${sourceInfo})`);
+            showToast(`ส่ง ${removedDriver.name} เข้าคลังสำรองแล้ว`);
         }
 
         function removeDriverFromCar(cIdx, dIdx) {
@@ -608,11 +623,11 @@
 
             vehicles[cIdx].drivers[dIdx] = { name: "", sap: "" };
             reservePool.push(drv);
-            changedSlots[`${cIdx}_${dIdx}`] = true;
+            changedSlots[`${cIdx}_${dIdx}`] = `เดิม ${vehicles[cIdx].carNo}`;
 
             logSapAction(`ถอด ${drv.name} ออกจากรถเบอร์ ${vehicles[cIdx].carNo} ไปยังคลังสำรอง`);
             renderApp();
-            showToast(`นำ ${drv.name} ออกจากรถแล้ว (เดิมเคยอยู่: รถเบอร์ ${vehicles[cIdx].carNo})`);
+            showToast(`นำ ${drv.name} ออกจากรถแล้ว`);
         }
 
         function addReserveDriver() {
