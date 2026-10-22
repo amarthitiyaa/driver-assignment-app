@@ -7,7 +7,7 @@
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome -->
-    <link rel="stylesheet href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- SheetJS for Excel -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
@@ -58,6 +58,7 @@
         
         <!-- Left 3 Cols: Vehicle Table -->
         <div class="lg:col-span-3 space-y-4">
+            <!-- Filter Bar -->
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center space-x-2">
                     <span class="text-sm font-semibold text-slate-600">กรองสังกัด:</span>
@@ -65,11 +66,23 @@
                         <option value="">ทั้งหมด</option>
                     </select>
                 </div>
-                <div class="relative flex-grow max-w-xs">
+
+                <!-- Multi-select Car Number Tags Filter -->
+                <div class="flex items-center space-x-2 flex-grow max-w-md">
+                    <span class="text-sm font-semibold text-slate-600 shrink-0">เลือกเบอร์รถ:</span>
+                    <div id="car-filter-box" class="flex flex-wrap items-center gap-1.5 border border-slate-300 rounded-lg p-1.5 bg-white flex-grow min-h-[38px]">
+                        <div id="car-tags-container" class="flex flex-wrap gap-1"></div>
+                        <select id="car-select-dropdown" onchange="addCarFilter(this)" class="text-sm border-0 focus:ring-0 outline-none bg-transparent flex-grow cursor-pointer py-0.5">
+                            <option value="">+ เพิ่มเบอร์รถ...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="relative max-w-xs">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                         <i class="fa-solid fa-search text-xs"></i>
                     </span>
-                    <input type="text" id="search-input" oninput="renderApp()" placeholder="ค้นหา เบอร์รถ, ทะเบียน, ชื่อ, SAP..." class="w-full pl-9 pr-4 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="search-input" oninput="renderApp()" placeholder="ค้นหาทะเบียน, ชื่อ, SAP..." class="w-full pl-9 pr-4 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
 
@@ -171,14 +184,13 @@
             { name: "ชาญชัย โพธิ์ศรี", sap: "1000006899" }
         ];
 
-        // Changed slots tracking: key = "carIndex_driverIndex", value = true
         let changedSlots = {};
-        // SAP Action Logs
         let sapLogs = [];
+        let selectedCarFilters = []; // Array of selected car numbers
 
-        // Init App
         window.onload = function() {
             initOrgFilter();
+            initCarDropdown();
             renderApp();
         };
 
@@ -191,6 +203,48 @@
             });
         }
 
+        function initCarDropdown() {
+            const select = document.getElementById('car-select-dropdown');
+            const allCarNos = vehicles.map(v => v.carNo).sort((a,b) => a.localeCompare(b, 'th', {numeric: true}));
+            
+            select.innerHTML = '<option value="">+ เพิ่มเบอร์รถ...</option>';
+            allCarNos.forEach(carNo => {
+                if (!selectedCarFilters.includes(carNo)) {
+                    select.innerHTML += `<option value="${carNo}">รถเบอร์ ${carNo}</option>`;
+                }
+            });
+        }
+
+        function addCarFilter(select) {
+            const val = select.value;
+            if (!val) return;
+            if (!selectedCarFilters.includes(val)) {
+                selectedCarFilters.push(val);
+            }
+            select.value = "";
+            initCarDropdown();
+            renderCarTags();
+            renderApp();
+        }
+
+        function removeCarFilter(carNo) {
+            selectedCarFilters = selectedCarFilters.filter(c => c !== carNo);
+            initCarDropdown();
+            renderCarTags();
+            renderApp();
+        }
+
+        function renderCarTags() {
+            const container = document.getElementById('car-tags-container');
+            container.innerHTML = '';
+            selectedCarFilters.forEach(carNo => {
+                const tag = document.createElement('span');
+                tag.className = "bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-md flex items-center space-x-1 font-medium";
+                tag.innerHTML = `<span>เบอร์ ${carNo}</span> <button onclick="removeCarFilter('${carNo}')" class="hover:text-red-600 ml-1 font-bold">&times;</button>`;
+                container.appendChild(tag);
+            });
+        }
+
         function renderApp() {
             const tbody = document.getElementById('vehicle-tbody');
             const filterOrg = document.getElementById('filter-org').value;
@@ -200,9 +254,11 @@
             let sapCount = 0;
 
             vehicles.forEach((veh, cIdx) => {
-                // Filter check
                 if (filterOrg && veh.org !== filterOrg) return;
                 
+                // Multi car filter check
+                if (selectedCarFilters.length > 0 && !selectedCarFilters.includes(veh.carNo)) return;
+
                 const matchSearch = !search || 
                     veh.carNo.toLowerCase().includes(search) || 
                     veh.plate.toLowerCase().includes(search) || 
@@ -221,7 +277,6 @@
                     <td class="p-3 text-slate-600 font-mono text-xs">${veh.plate}</td>
                 `;
 
-                // Render Drivers (0, 1, 2)
                 for (let dIdx = 0; dIdx < 3; dIdx++) {
                     const drv = veh.drivers[dIdx];
                     const slotKey = `${cIdx}_${dIdx}`;
@@ -242,7 +297,6 @@
                                  ondragleave="removeDragOver(event)"
                                  ondrop="dropToVehicle(event, ${cIdx}, ${dIdx})"
                                  draggable="${drv.name ? 'true' : 'false'}"
-                                 onsragstart="dragVehicleDriver(event, ${cIdx}, ${dIdx})"
                                  id="slot-${cIdx}-${dIdx}">
                     `;
 
@@ -266,7 +320,6 @@
                     html += `</div></td>`;
                 }
 
-                // Reserve / Note column
                 html += `
                     <td class="p-3 text-xs text-slate-500">
                         <input type="text" value="${veh.reserve || ''}" onchange="updateReserveNote(${cIdx}, this.value)" placeholder="ระบุสำรอง..." class="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
@@ -307,7 +360,6 @@
             });
         }
 
-        // Drag and Drop State
         let draggedData = null;
 
         function dragVehicleDriver(e, cIdx, dIdx) {
@@ -341,11 +393,9 @@
                 const srcCar = vehicles[draggedData.cIdx];
                 const srcDIdx = draggedData.dIdx;
 
-                // Swap or Move
                 targetCar.drivers[targetDIdx] = srcCar.drivers[srcDIdx];
                 srcCar.drivers[srcDIdx] = oldTargetDriver;
 
-                // Mark changes
                 changedSlots[`${targetCIdx}_${targetDIdx}`] = true;
                 if (oldTargetDriver.name) {
                     changedSlots[`${draggedData.cIdx}_${srcDIdx}`] = true;
@@ -357,7 +407,6 @@
                 }
 
             } else if (draggedData.type === 'reserve') {
-                // Move from reserve to vehicle
                 targetCar.drivers[targetDIdx] = draggedData.driver;
                 reservePool.splice(draggedData.rIdx, 1);
 
@@ -443,7 +492,6 @@
             sapLogs.push({ time: new Date().toLocaleTimeString(), text });
         }
 
-        // SAP Guide Modal
         function openSapGuideModal() {
             const container = document.getElementById('sap-steps-container');
             if (sapLogs.length === 0) {
@@ -481,7 +529,6 @@
             }, 2500);
         }
 
-        // Excel Export
         function exportExcel() {
             let data = vehicles.map(v => ({
                 "สังกัด": v.org,
@@ -504,7 +551,6 @@
             showToast("ดาวน์โหลดไฟล์ Excel สำเร็จ");
         }
 
-        // Excel Import
         function importExcel(e) {
             const file = e.target.files[0];
             if (!file) return;
@@ -531,6 +577,7 @@
                     }));
 
                     initOrgFilter();
+                    initCarDropdown();
                     renderApp();
                     showToast("นำเข้าข้อมูล Excel สำเร็จ!");
                 } catch (err) {
