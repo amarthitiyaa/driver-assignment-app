@@ -19,10 +19,10 @@
 <body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
 
     <!-- Top Navbar -->
-    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-[96%] mx-auto px-4 py-3.5 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center space-x-3">
-                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                <div class="bg-blue-600 p-2.5 rounded-xl text-white">
                     <i class="fa-solid fa-truck-fast text-xl"></i>
                 </div>
                 <div>
@@ -31,21 +31,21 @@
                 </div>
             </div>
             
-            <div class="flex flex-wrap items-center gap-2">
-                <button onclick="openSapGuideModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition shadow">
+            <div class="flex flex-wrap items-center gap-2.5">
+                <button onclick="openSapGuideModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-sm font-medium flex items-center space-x-2 transition shadow">
                     <i class="fa-solid fa-file-invoice"></i>
                     <span>คู่มือคีย์ SAP (<span id="sap-count">0</span>)</span>
                 </button>
-                <button onclick="clearAllHighlights()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition">
+                <button onclick="clearAllHighlights()" class="bg-slate-700 hover:bg-slate-600 text-white px-3.5 py-2 rounded-xl text-sm font-medium flex items-center space-x-2 transition">
                     <i class="fa-solid fa-rotate-left"></i>
                     <span>ล้างไฮไลท์ทั้งหมด</span>
                 </button>
-                <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 cursor-pointer transition shadow">
+                <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-sm font-medium flex items-center space-x-2 cursor-pointer transition shadow">
                     <i class="fa-solid fa-file-excel"></i>
                     <span>นำเข้า Excel</span>
                     <input type="file" id="excel-file" accept=".xlsx, .xls, .csv" class="hidden" onchange="importExcel(event)">
                 </label>
-                <button onclick="exportExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition shadow">
+                <button onclick="exportExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-sm font-medium flex items-center space-x-2 transition shadow">
                     <i class="fa-solid fa-download"></i>
                     <span>ดาวน์โหลด Excel</span>
                 </button>
@@ -53,52 +53,67 @@
         </div>
     </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow grid grid-cols-1 lg:grid-cols-4 gap-6 w-full">
+    <!-- Main Content (Expanded width) -->
+    <main class="max-w-[96%] mx-auto px-4 py-6 flex-grow grid grid-cols-1 lg:grid-cols-4 gap-6 w-full">
         
         <!-- Left 3 Cols: Vehicle Table -->
         <div class="lg:col-span-3 space-y-4">
             <!-- Filter Bar -->
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center space-x-2">
-                    <span class="text-sm font-semibold text-slate-600">กรองสังกัด:</span>
-                    <select id="filter-org" onchange="renderApp()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <div class="bg-white p-4.5 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-2.5">
+                    <span class="text-sm font-semibold text-slate-700">กรองสังกัด:</span>
+                    <select id="filter-org" onchange="renderApp()" class="border border-slate-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                         <option value="">ทั้งหมด</option>
                     </select>
                 </div>
 
-                <!-- Multi-select Car Number Tags Filter -->
-                <div class="flex items-center space-x-2 flex-grow max-w-md">
-                    <span class="text-sm font-semibold text-slate-600 shrink-0">เลือกเบอร์รถ:</span>
-                    <div id="car-filter-box" class="flex flex-wrap items-center gap-1.5 border border-slate-300 rounded-lg p-1.5 bg-white flex-grow min-h-[38px]">
-                        <div id="car-tags-container" class="flex flex-wrap gap-1"></div>
-                        <select id="car-select-dropdown" onchange="addCarFilter(this)" class="text-sm border-0 focus:ring-0 outline-none bg-transparent flex-grow cursor-pointer py-0.5">
-                            <option value="">+ เพิ่มเบอร์รถ...</option>
-                        </select>
+                <!-- Custom Checkbox Dropdown Filter for Car Numbers -->
+                <div class="relative" id="car-dropdown-container">
+                    <span class="text-sm font-semibold text-slate-700 mr-2">เบอร์รถ:</span>
+                    <button onclick="toggleCarDropdown(event)" id="car-dropdown-btn" class="border border-slate-300 rounded-xl px-4 py-2 text-sm bg-white hover:bg-slate-50 flex items-center justify-between space-x-4 min-w-[200px]">
+                        <span id="car-dropdown-label" class="text-slate-700 font-medium">ทั้งหมด</span>
+                        <i class="fa-solid fa-chevron-down text-xs text-slate-400"></i>
+                    </button>
+
+                    <!-- Dropdown Box -->
+                    <div id="car-dropdown-menu" class="hidden absolute left-0 mt-2 w-72 bg-white border border-slate-200 rounded-2xl shadow-xl z-30 p-3.5 space-y-3">
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                                <i class="fa-solid fa-search text-xs"></i>
+                            </span>
+                            <input type="text" id="car-search-input" oninput="filterCarCheckboxList()" placeholder="พิมพ์เพื่อค้นหา..." class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                        <div class="flex justify-between items-center text-xs font-semibold text-emerald-600 px-1 border-b border-slate-100 pb-2">
+                            <button onclick="selectAllCars(true)" class="hover:underline">เลือกทั้งหมด</button>
+                            <button onclick="selectAllCars(false)" class="text-slate-500 hover:underline">ล้าง</button>
+                        </div>
+                        <div id="car-checkbox-list" class="max-h-56 overflow-y-auto space-y-1.5 pr-1">
+                            <!-- Checkboxes injected by JS -->
+                        </div>
                     </div>
                 </div>
 
-                <div class="relative max-w-xs">
+                <div class="relative flex-grow max-w-xs">
                     <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
                         <i class="fa-solid fa-search text-xs"></i>
                     </span>
-                    <input type="text" id="search-input" oninput="renderApp()" placeholder="ค้นหาทะเบียน, ชื่อ, SAP..." class="w-full pl-9 pr-4 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="text" id="search-input" oninput="renderApp()" placeholder="ค้นหาทะเบียน, ชื่อ, SAP..." class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse text-sm">
                         <thead>
-                            <tr class="bg-slate-800 text-white text-xs uppercase tracking-wider">
-                                <th class="p-3">สังกัด</th>
-                                <th class="p-3 text-center">เบอร์รถ</th>
-                                <th class="p-3 text-center">TW</th>
-                                <th class="p-3">ทะเบียน</th>
-                                <th class="p-3">พพร. 1 (หลัก)</th>
-                                <th class="p-3">พพร. 2</th>
-                                <th class="p-3">พพร. 3</th>
-                                <th class="p-3">สำรอง / หมายเหตุ</th>
+                            <tr class="bg-slate-900 text-white text-xs uppercase tracking-wider">
+                                <th class="p-3.5">สังกัด</th>
+                                <th class="p-3.5 text-center">เบอร์รถ</th>
+                                <th class="p-3.5 text-center">TW</th>
+                                <th class="p-3.5">ทะเบียน</th>
+                                <th class="p-3.5">พพร. 1 (หลัก)</th>
+                                <th class="p-3.5">พพร. 2</th>
+                                <th class="p-3.5">พพร. 3</th>
+                                <th class="p-3.5">สำรอง / หมายเหตุ</th>
                             </tr>
                         </thead>
                         <tbody id="vehicle-tbody" class="divide-y divide-slate-200">
@@ -111,27 +126,27 @@
 
         <!-- Right 1 Col: Reserve Pool -->
         <div class="lg:col-span-1 space-y-4">
-            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 sticky top-20">
+            <div class="bg-white p-4.5 rounded-2xl shadow-sm border border-slate-200 sticky top-20">
                 <div class="flex items-center justify-between mb-3">
-                    <h2 class="font-bold text-slate-800 flex items-center space-x-2">
+                    <h2 class="font-bold text-slate-800 flex items-center space-x-2 text-base">
                         <i class="fa-solid fa-users text-amber-500"></i>
                         <span>คลังพนักงานสำรอง</span>
                     </h2>
-                    <span id="reserve-count" class="bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-0.5 rounded-full">0</span>
+                    <span id="reserve-count" class="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">0</span>
                 </div>
-                <p class="text-xs text-slate-500 mb-3">ลากชื่อจากช่องรถมาวางที่นี่ หรือลากจากที่นี่ไปใส่รถได้ทันที</p>
+                <p class="text-xs text-slate-500 mb-3.5">ลากชื่อจากช่องรถมาวางที่นี่ หรือลากจากที่นี่ไปใส่รถได้ทันที</p>
                 
-                <div class="flex gap-2 mb-3">
-                    <input type="text" id="new-reserve-name" placeholder="ชื่อ-นามสกุล" class="w-1/2 px-2 py-1 border border-slate-300 rounded text-xs">
-                    <input type="text" id="new-reserve-sap" placeholder="รหัส SAP" class="w-1/2 px-2 py-1 border border-slate-300 rounded text-xs">
-                    <button onclick="addReserveDriver()" class="bg-slate-800 text-white px-2.5 py-1 rounded text-xs hover:bg-slate-700"><i class="fa-solid fa-plus"></i></button>
+                <div class="flex gap-2 mb-3.5">
+                    <input type="text" id="new-reserve-name" placeholder="ชื่อ-นามสกุล" class="w-1/2 px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs">
+                    <input type="text" id="new-reserve-sap" placeholder="รหัส SAP" class="w-1/2 px-2.5 py-1.5 border border-slate-300 rounded-xl text-xs">
+                    <button onclick="addReserveDriver()" class="bg-slate-800 text-white px-3 py-1.5 rounded-xl text-xs hover:bg-slate-700"><i class="fa-solid fa-plus"></i></button>
                 </div>
 
                 <div id="reserve-dropzone" 
                      ondragover="allowDrop(event)" 
                      ondragleave="removeDragOver(event)" 
                      ondrop="dropToReserve(event)" 
-                     class="min-h-[350px] max-h-[500px] overflow-y-auto space-y-2 p-2 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50">
+                     class="min-h-[380px] max-h-[550px] overflow-y-auto space-y-2.5 p-2.5 border-2 border-dashed border-slate-300 rounded-xl bg-slate-50">
                     <!-- Reserve Cards -->
                 </div>
             </div>
@@ -153,10 +168,10 @@
                 <!-- Steps generated dynamically -->
             </div>
             <div class="bg-slate-100 px-6 py-3 border-t border-slate-200 flex justify-end space-x-3">
-                <button onclick="copySapSteps()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow">
+                <button onclick="copySapSteps()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow">
                     <i class="fa-solid fa-copy mr-1"></i> คัดลอกรายการทั้งหมด
                 </button>
-                <button onclick="closeSapGuideModal()" class="bg-slate-300 hover:bg-slate-400 text-slate-800 px-4 py-2 rounded-lg text-sm font-medium transition">
+                <button onclick="closeSapGuideModal()" class="bg-slate-300 hover:bg-slate-400 text-slate-800 px-4 py-2 rounded-xl text-sm font-medium transition">
                     ปิด
                 </button>
             </div>
@@ -170,7 +185,6 @@
     </div>
 
     <script>
-        // Default Sample Data (matching user format)
         let vehicles = [
             { org: "ขอนแก่น", carNo: "305", tw: "10WT", plate: "กท61-0997", drivers: [{name:"ไพฑูรย์ สอนเสนา", sap:"1000002933"}, {name:"", sap:""}, {name:"", sap:""}], reserve: "" },
             { org: "ขอนแก่น", carNo: "316", tw: "10WT", plate: "กท61-2062", drivers: [{name:"คมสันต์ อันพันธ์ล้ำ", sap:"1000006980"}, {name:"ภานุ จรรยาศรี", sap:"1000004673"}, {name:"", sap:""}], reserve: "" },
@@ -186,63 +200,127 @@
 
         let changedSlots = {};
         let sapLogs = [];
-        let selectedCarFilters = []; // Array of selected car numbers
+        let selectedCarFilters = []; // empty means all selected
 
         window.onload = function() {
             initOrgFilter();
-            initCarDropdown();
+            initCarCheckboxes();
             renderApp();
+            
+            // Close dropdown when clicking outside
+            window.addEventListener('click', function(e) {
+                const container = document.getElementById('car-dropdown-container');
+                const menu = document.getElementById('car-dropdown-menu');
+                if (!container.contains(e.target)) {
+                    menu.classList.add('hidden');
+                }
+            });
         };
 
         function initOrgFilter() {
             const orgs = [...new Set(vehicles.map(v => v.org))];
             const select = document.getElementById('filter-org');
-            select.innerHTML = '<option value="">ทุกสังกัด</option>';
+            select.innerHTML = '<option value="">ทั้งหมด</option>';
             orgs.forEach(org => {
                 select.innerHTML += `<option value="${org}">${org}</option>`;
             });
         }
 
-        function initCarDropdown() {
-            const select = document.getElementById('car-select-dropdown');
-            const allCarNos = vehicles.map(v => v.carNo).sort((a,b) => a.localeCompare(b, 'th', {numeric: true}));
-            
-            select.innerHTML = '<option value="">+ เพิ่มเบอร์รถ...</option>';
-            allCarNos.forEach(carNo => {
-                if (!selectedCarFilters.includes(carNo)) {
-                    select.innerHTML += `<option value="${carNo}">รถเบอร์ ${carNo}</option>`;
-                }
-            });
+        function initCarCheckboxes() {
+            const allCarNos = [...new Set(vehicles.map(v => v.carNo))].sort((a,b) => a.localeCompare(b, 'th', {numeric: true}));
+            renderCarCheckboxItems(allCarNos);
+            updateCarDropdownLabel();
         }
 
-        function addCarFilter(select) {
-            const val = select.value;
-            if (!val) return;
-            if (!selectedCarFilters.includes(val)) {
-                selectedCarFilters.push(val);
-            }
-            select.value = "";
-            initCarDropdown();
-            renderCarTags();
-            renderApp();
-        }
-
-        function removeCarFilter(carNo) {
-            selectedCarFilters = selectedCarFilters.filter(c => c !== carNo);
-            initCarDropdown();
-            renderCarTags();
-            renderApp();
-        }
-
-        function renderCarTags() {
-            const container = document.getElementById('car-tags-container');
+        function renderCarCheckboxItems(carNos) {
+            const container = document.getElementById('car-checkbox-list');
             container.innerHTML = '';
-            selectedCarFilters.forEach(carNo => {
-                const tag = document.createElement('span');
-                tag.className = "bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-md flex items-center space-x-1 font-medium";
-                tag.innerHTML = `<span>เบอร์ ${carNo}</span> <button onclick="removeCarFilter('${carNo}')" class="hover:text-red-600 ml-1 font-bold">&times;</button>`;
-                container.appendChild(tag);
+            
+            if (carNos.length === 0) {
+                container.innerHTML = `<div class="text-xs text-slate-400 text-center py-2">ไม่พบเบอร์รถ</div>`;
+                return;
+            }
+
+            carNos.forEach(carNo => {
+                const isChecked = selectedCarFilters.length === 0 || selectedCarFilters.includes(carNo);
+                const label = document.createElement('label');
+                label.className = "flex items-center space-x-2.5 text-sm text-slate-700 hover:bg-slate-50 p-1.5 rounded-lg cursor-pointer car-item-label";
+                label.innerHTML = `
+                    <input type="checkbox" value="${carNo}" ${isChecked ? 'checked' : ''} onchange="onCarCheckboxChange(this)" class="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500">
+                    <span>รถเบอร์ ${carNo}</span>
+                `;
+                container.appendChild(label);
             });
+        }
+
+        function filterCarCheckboxList() {
+            const query = document.getElementById('car-search-input').value.toLowerCase();
+            const allCarNos = [...new Set(vehicles.map(v => v.carNo))].sort((a,b) => a.localeCompare(b, 'th', {numeric: true}));
+            const filtered = allCarNos.filter(c => c.toLowerCase().includes(query));
+            renderCarCheckboxItems(filtered);
+        }
+
+        function toggleCarDropdown(e) {
+            e.stopPropagation();
+            const menu = document.getElementById('car-dropdown-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        function onCarCheckboxChange(checkbox) {
+            const allCarNos = [...new Set(vehicles.map(v => v.carNo))];
+            
+            // If currently all were selected (selectedCarFilters is empty), populate it first
+            if (selectedCarFilters.length === 0) {
+                selectedCarFilters = [...allCarNos];
+            }
+
+            if (checkbox.checked) {
+                if (!selectedCarFilters.includes(checkbox.value)) {
+                    selectedCarFilters.push(checkbox.value);
+                }
+            } else {
+                selectedCarFilters = selectedCarFilters.filter(c => c !== checkbox.value);
+            }
+
+            // If all are checked now, reset to empty (means all)
+            if (selectedCarFilters.length === allCarNos.length) {
+                selectedCarFilters = [];
+            }
+
+            updateCarDropdownLabel();
+            renderApp();
+        }
+
+        function selectAllCars(select) {
+            const allCarNos = [...new Set(vehicles.map(v => v.carNo))];
+            if (select) {
+                selectedCarFilters = []; // empty means all
+            } else {
+                selectedCarFilters = ['__none__']; // unselect all
+            }
+            
+            const checkboxes = document.querySelectorAll('#car-checkbox-list input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = select);
+
+            updateCarDropdownLabel();
+            renderApp();
+        }
+
+        function updateCarDropdownLabel() {
+            const label = document.getElementById('car-dropdown-label');
+            const allCarNos = [...new Set(vehicles.map(v => v.carNo))];
+            
+            if (selectedCarFilters.length === 0) {
+                label.innerText = "ทั้งหมด";
+            } else if (selectedCarFilters.length === 1 && selectedCarFilters[0] !== '__none__') {
+                label.innerText = `รถเบอร์ ${selectedCarFilters[0]}`;
+            } else if (selectedCarFilters.length === allCarNos.length) {
+                label.innerText = "ทั้งหมด";
+            } else if (selectedCarFilters[0] === '__none__' || selectedCarFilters.length === 0) {
+                label.innerText = "ไม่ได้เลือก";
+            } else {
+                label.innerText = `เลือกแล้ว (${selectedCarFilters.length} คัน)`;
+            }
         }
 
         function renderApp() {
@@ -256,8 +334,10 @@
             vehicles.forEach((veh, cIdx) => {
                 if (filterOrg && veh.org !== filterOrg) return;
                 
-                // Multi car filter check
-                if (selectedCarFilters.length > 0 && !selectedCarFilters.includes(veh.carNo)) return;
+                // Multi car checkbox filter check
+                if (selectedCarFilters.length > 0) {
+                    if (selectedCarFilters.includes('__none__') || !selectedCarFilters.includes(veh.carNo)) return;
+                }
 
                 const matchSearch = !search || 
                     veh.carNo.toLowerCase().includes(search) || 
@@ -271,10 +351,10 @@
                 tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
 
                 let html = `
-                    <td class="p-3 font-medium text-slate-700">${veh.org}</td>
-                    <td class="p-3 text-center font-bold text-slate-900">${veh.carNo}</td>
-                    <td class="p-3 text-center"><span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs font-semibold">${veh.tw}</span></td>
-                    <td class="p-3 text-slate-600 font-mono text-xs">${veh.plate}</td>
+                    <td class="p-4 font-medium text-slate-700">${veh.org}</td>
+                    <td class="p-4 text-center font-bold text-slate-900 text-base">${veh.carNo}</td>
+                    <td class="p-4 text-center"><span class="bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg text-xs font-semibold">${veh.tw}</span></td>
+                    <td class="p-4 text-slate-600 font-mono text-xs">${veh.plate}</td>
                 `;
 
                 for (let dIdx = 0; dIdx < 3; dIdx++) {
@@ -283,15 +363,15 @@
                     const isChanged = changedSlots[slotKey];
                     if (isChanged) sapCount++;
 
-                    let slotClass = "border rounded-lg p-2 min-h-[50px] transition cursor-pointer relative ";
+                    let slotClass = "border rounded-xl p-3 min-h-[60px] transition cursor-pointer relative ";
                     if (isChanged) {
-                        slotClass += "border-amber-400 bg-amber-50/70 shadow-sm";
+                        slotClass += "border-amber-400 bg-amber-50/80 shadow-xs";
                     } else {
-                        slotClass += "border-slate-200 bg-slate-50/50 hover:border-slate-300";
+                        slotClass += "border-slate-200 bg-slate-50/60 hover:border-slate-300";
                     }
 
                     html += `
-                        <td class="p-2">
+                        <td class="p-2.5">
                             <div class="${slotClass}"
                                  ondragover="allowDrop(event)"
                                  ondragleave="removeDragOver(event)"
@@ -302,27 +382,27 @@
 
                     if (drv.name) {
                         html += `
-                            <div class="flex items-start justify-between gap-1" draggable="true" ondragstart="dragVehicleDriver(event, ${cIdx}, ${dIdx})">
+                            <div class="flex items-start justify-between gap-1.5" draggable="true" ondragstart="dragVehicleDriver(event, ${cIdx}, ${dIdx})">
                                 <div class="cursor-grab">
-                                    <p class="font-semibold text-slate-800 text-xs">${drv.name}</p>
-                                    <p class="text-[10px] text-slate-500 font-mono">SAP: ${drv.sap || '-'}</p>
+                                    <p class="font-semibold text-slate-800 text-xs sm:text-sm">${drv.name}</p>
+                                    <p class="text-[11px] text-slate-500 font-mono">SAP: ${drv.sap || '-'}</p>
                                 </div>
                                 <div class="flex items-center space-x-1">
-                                    ${isChanged ? '<span class="bg-amber-200 text-amber-800 text-[9px] px-1 rounded font-bold">เปลี่ยน</span>' : ''}
-                                    <button onclick="removeDriverFromCar(${cIdx}, ${dIdx})" class="text-slate-400 hover:text-red-600 p-0.5" title="ถอดออก"><i class="fa-solid fa-xmark text-xs"></i></button>
+                                    ${isChanged ? '<span class="bg-amber-200 text-amber-800 text-[10px] px-1.5 py-0.5 rounded font-bold">เปลี่ยน</span>' : ''}
+                                    <button onclick="removeDriverFromCar(${cIdx}, ${dIdx})" class="text-slate-400 hover:text-red-600 p-1" title="ถอดออก"><i class="fa-solid fa-xmark text-xs"></i></button>
                                 </div>
                             </div>
                         `;
                     } else {
-                        html += `<div class="text-center py-1 text-slate-400 text-xs italic"><i class="fa-solid fa-plus text-[10px] mr-1"></i>ว่าง (ลากมาวาง)</div>`;
+                        html += `<div class="text-center py-2 text-slate-400 text-xs italic"><i class="fa-solid fa-plus text-[10px] mr-1"></i>ว่าง (ลากมาวาง)</div>`;
                     }
 
                     html += `</div></td>`;
                 }
 
                 html += `
-                    <td class="p-3 text-xs text-slate-500">
-                        <input type="text" value="${veh.reserve || ''}" onchange="updateReserveNote(${cIdx}, this.value)" placeholder="ระบุสำรอง..." class="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    <td class="p-4 text-xs text-slate-500">
+                        <input type="text" value="${veh.reserve || ''}" onchange="updateReserveNote(${cIdx}, this.value)" placeholder="ระบุสำรอง..." class="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
                     </td>
                 `;
 
@@ -339,20 +419,20 @@
             document.getElementById('reserve-count').innerText = reservePool.length;
             
             if (reservePool.length === 0) {
-                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">ไม่มีพนักงานในคลังสำรอง</div>`;
+                container.innerHTML = `<div class="text-center py-12 text-slate-400 text-xs italic">ไม่มีพนักงานในคลังสำรอง</div>`;
                 return;
             }
 
             container.innerHTML = '';
             reservePool.forEach((drv, rIdx) => {
                 let div = document.createElement('div');
-                div.className = "bg-white p-2.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-between cursor-grab hover:border-amber-400 transition";
+                div.className = "bg-white p-3 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between cursor-grab hover:border-amber-400 transition";
                 div.draggable = true;
                 div.ondragstart = (e) => dragReserveDriver(e, rIdx);
                 div.innerHTML = `
                     <div>
-                        <p class="font-semibold text-slate-800 text-xs">${drv.name}</p>
-                        <p class="text-[10px] text-slate-500 font-mono">SAP: ${drv.sap}</p>
+                        <p class="font-semibold text-slate-800 text-xs sm:text-sm">${drv.name}</p>
+                        <p class="text-[11px] text-slate-500 font-mono">SAP: ${drv.sap}</p>
                     </div>
                     <button onclick="deleteReserve(${rIdx})" class="text-slate-400 hover:text-red-600 p-1"><i class="fa-solid fa-trash text-xs"></i></button>
                 `;
@@ -498,11 +578,11 @@
                 container.innerHTML = `<div class="text-center py-12 text-slate-400">ยังไม่มีการเปลี่ยนแปลงข้อมูลในรอบนี้</div>`;
             } else {
                 container.innerHTML = `<ol class="space-y-3">` + sapLogs.map((log, idx) => `
-                    <li class="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-start space-x-3 text-sm">
+                    <li class="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex items-start space-x-3 text-sm">
                         <span class="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">${idx + 1}</span>
                         <div class="flex-grow">
                             <p class="text-slate-800 font-medium">${log.text}</p>
-                            <span class="text-[10px] text-slate-400">บันทึกเวลา: ${log.time}</span>
+                            <span class="text-[11px] text-slate-400">บันทึกเวลา: ${log.time}</span>
                         </div>
                     </li>
                 `).join('') + `</ol>`;
@@ -577,7 +657,8 @@
                     }));
 
                     initOrgFilter();
-                    initCarDropdown();
+                    initCarCheckboxes();
+                    selectedCarFilters = [];
                     renderApp();
                     showToast("นำเข้าข้อมูล Excel สำเร็จ!");
                 } catch (err) {
