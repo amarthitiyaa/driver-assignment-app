@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการพนักงานขับรถประจำรถ & SAP Action Guide</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Sarabun', sans-serif; }
+        .drag-over { background-color: #fef3c7 !important; border-color: #f59e0b !important; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Top Navbar -->
+    <header class="bg-slate-900 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
+                    <i class="fa-solid fa-truck-fast text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold">ระบบจัดการพนักงานขับรถ & SAP Sync</h1>
+                    <p class="text-xs text-slate-400">ลากวางเพื่อจัดสรรรถ + สร้างคู่มือคีย์ SAP อัตโนมัติ</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="openSapGuideModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition shadow">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    <span>คู่มือคีย์ SAP (<span id="sap-count">0</span>)</span>
+                </button>
+                <button onclick="clearAllHighlights()" class="bg-slate-700 hover:bg-slate-600 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    <span>ล้างไฮไลท์ทั้งหมด</span>
+                </button>
+                <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 cursor-pointer transition shadow">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>นำเข้า Excel</span>
+                    <input type="file" id="excel-file" accept=".xlsx, .xls, .csv" class="hidden" onchange="importExcel(event)">
+                </label>
+                <button onclick="exportExcel()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg text-sm font-medium flex items-center space-x-2 transition shadow">
+                    <i class="fa-solid fa-download"></i>
+                    <span>ดาวน์โหลด Excel</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-6 flex-grow grid grid-cols-1 lg:grid-cols-4 gap-6 w-full">
+        
+        <!-- Left 3 Cols: Vehicle Table -->
+        <div class="lg:col-span-3 space-y-4">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-2">
+                    <span class="text-sm font-semibold text-slate-600">กรองสังกัด:</span>
+                    <select id="filter-org" onchange="renderApp()" class="border border-slate-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">ทั้งหมด</option>
+                    </select>
+                </div>
+                <div class="relative flex-grow max-w-xs">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400">
+                        <i class="fa-solid fa-search text-xs"></i>
+                    </span>
+                    <input type="text" id="search-input" oninput="renderApp()" placeholder="ค้นหา เบอร์รถ, ทะเบียน, ชื่อ, SAP..." class="w-full pl-9 pr-4 py-1.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-800 text-white text-xs uppercase tracking-wider">
+                                <th class="p-3">สังกัด</th>
+                                <th class="p-3 text-center">เบอร์รถ</th>
+                                <th class="p-3 text-center">TW</th>
+                                <th class="p-3">ทะเบียน</th>
+                                <th class="p-3">พพร. 1 (หลัก)</th>
+                                <th class="p-3">พพร. 2</th>
+                                <th class="p-3">พพร. 3</th>
+                                <th class="p-3">สำรอง / หมายเหตุ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="vehicle-tbody" class="divide-y divide-slate-200">
+                            <!-- Rendered by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right 1 Col: Reserve Pool -->
+        <div class="lg:col-span-1 space-y-4">
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 sticky top-20">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="font-bold text-slate-800 flex items-center space-x-2">
+                        <i class="fa-solid fa-users text-amber-500"></i>
+                        <span>คลังพนักงานสำรอง</span>
+                    </h2>
+                    <span id="reserve-count" class="bg-amber-100 text-amber-800 text-xs font-semibold px-2 py-0.5 rounded-full">0</span>
+                </div>
+                <p class="text-xs text-slate-500 mb-3">ลากชื่อจากช่องรถมาวางที่นี่ หรือลากจากที่นี่ไปใส่รถได้ทันที</p>
+                
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="new-reserve-name" placeholder="ชื่อ-นามสกุล" class="w-1/2 px-2 py-1 border border-slate-300 rounded text-xs">
+                    <input type="text" id="new-reserve-sap" placeholder="รหัส SAP" class="w-1/2 px-2 py-1 border border-slate-300 rounded text-xs">
+                    <button onclick="addReserveDriver()" class="bg-slate-800 text-white px-2.5 py-1 rounded text-xs hover:bg-slate-700"><i class="fa-solid fa-plus"></i></button>
+                </div>
+
+                <div id="reserve-dropzone" 
+                     ondragover="allowDrop(event)" 
+                     ondragleave="removeDragOver(event)" 
+                     ondrop="dropToReserve(event)" 
+                     class="min-h-[350px] max-h-[500px] overflow-y-auto space-y-2 p-2 border-2 border-dashed border-slate-300 rounded-lg bg-slate-50">
+                    <!-- Reserve Cards -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- SAP Guide Modal -->
+    <div id="sap-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+            <div class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg flex items-center space-x-2">
+                    <i class="fa-solid fa-list-check text-indigo-400"></i>
+                    <span>คู่มือปฏิบัติงานสำหรับคีย์ SAP (SAP Action Guide)</span>
+                </h3>
+                <button onclick="closeSapGuideModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 flex-grow" id="sap-steps-container">
+                <!-- Steps generated dynamically -->
+            </div>
+            <div class="bg-slate-100 px-6 py-3 border-t border-slate-200 flex justify-end space-x-3">
+                <button onclick="copySapSteps()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow">
+                    <i class="fa-solid fa-copy mr-1"></i> คัดลอกรายการทั้งหมด
+                </button>
+                <button onclick="closeSapGuideModal()" class="bg-slate-300 hover:bg-slate-400 text-slate-800 px-4 py-2 rounded-lg text-sm font-medium transition">
+                    ปิด
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center space-x-2 text-sm">
+        <i class="fa-solid fa-circle-check text-emerald-400"></i>
+        <span id="toast-msg">บันทึกเรียบร้อย</span>
+    </div>
+
+    <script>
+        // Default Sample Data (matching user format)
+        let vehicles = [
+            { org: "ขอนแก่น", carNo: "305", tw: "10WT", plate: "กท61-0997", drivers: [{name:"ไพฑูรย์ สอนเสนา", sap:"1000002933"}, {name:"", sap:""}, {name:"", sap:""}], reserve: "" },
+            { org: "ขอนแก่น", carNo: "316", tw: "10WT", plate: "กท61-2062", drivers: [{name:"คมสันต์ อันพันธ์ล้ำ", sap:"1000006980"}, {name:"ภานุ จรรยาศรี", sap:"1000004673"}, {name:"", sap:""}], reserve: "" },
+            { org: "ขอนแก่น", carNo: "329", tw: "10WT", plate: "กท61-3956", drivers: [{name:"เอกวุฒิ ชาติสิงห์", sap:"1000001458"}, {name:"ฉัตรชัย อ่อนทอง", sap:"1000003425"}, {name:"", sap:""}], reserve: "" },
+            { org: "ขอนแก่น", carNo: "405", tw: "10WT", plate: "กท61-5188", drivers: [{name:"บุญถัน ศรีชมชื่น", sap:"1000000047"}, {name:"สุรัตน์ เพิ่มภาค", sap:"1000000594"}, {name:"", sap:""}], reserve: "" },
+            { org: "ขอนแก่น", carNo: "427", tw: "10WT", plate: "กท62-5576", drivers: [{name:"บัณฑิต วงศ์จันลา", sap:"1000001455"}, {name:"กิตติ ลาฤทธิ์", sap:"1000006500"}, {name:"", sap:""}], reserve: "" },
+        ];
+
+        let reservePool = [
+            { name: "อนุชา อ่อนสุด", sap: "1000005541" },
+            { name: "ชาญชัย โพธิ์ศรี", sap: "1000006899" }
+        ];
+
+        // Changed slots tracking: key = "carIndex_driverIndex", value = true
+        let changedSlots = {};
+        // SAP Action Logs
+        let sapLogs = [];
+
+        // Init App
+        window.onload = function() {
+            initOrgFilter();
+            renderApp();
+        };
+
+        function initOrgFilter() {
+            const orgs = [...new Set(vehicles.map(v => v.org))];
+            const select = document.getElementById('filter-org');
+            select.innerHTML = '<option value="">ทุกสังกัด</option>';
+            orgs.forEach(org => {
+                select.innerHTML += `<option value="${org}">${org}</option>`;
+            });
+        }
+
+        function renderApp() {
+            const tbody = document.getElementById('vehicle-tbody');
+            const filterOrg = document.getElementById('filter-org').value;
+            const search = document.getElementById('search-input').value.toLowerCase();
+            
+            tbody.innerHTML = '';
+            let sapCount = 0;
+
+            vehicles.forEach((veh, cIdx) => {
+                // Filter check
+                if (filterOrg && veh.org !== filterOrg) return;
+                
+                const matchSearch = !search || 
+                    veh.carNo.toLowerCase().includes(search) || 
+                    veh.plate.toLowerCase().includes(search) || 
+                    veh.org.toLowerCase().includes(search) ||
+                    veh.drivers.some(d => d.name.toLowerCase().includes(search) || d.sap.includes(search));
+                
+                if (!matchSearch) return;
+
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition border-b border-slate-100";
+
+                let html = `
+                    <td class="p-3 font-medium text-slate-700">${veh.org}</td>
+                    <td class="p-3 text-center font-bold text-slate-900">${veh.carNo}</td>
+                    <td class="p-3 text-center"><span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs font-semibold">${veh.tw}</span></td>
+                    <td class="p-3 text-slate-600 font-mono text-xs">${veh.plate}</td>
+                `;
+
+                // Render Drivers (0, 1, 2)
+                for (let dIdx = 0; dIdx < 3; dIdx++) {
+                    const drv = veh.drivers[dIdx];
+                    const slotKey = `${cIdx}_${dIdx}`;
+                    const isChanged = changedSlots[slotKey];
+                    if (isChanged) sapCount++;
+
+                    let slotClass = "border rounded-lg p-2 min-h-[50px] transition cursor-pointer relative ";
+                    if (isChanged) {
+                        slotClass += "border-amber-400 bg-amber-50/70 shadow-sm";
+                    } else {
+                        slotClass += "border-slate-200 bg-slate-50/50 hover:border-slate-300";
+                    }
+
+                    html += `
+                        <td class="p-2">
+                            <div class="${slotClass}"
+                                 ondragover="allowDrop(event)"
+                                 ondragleave="removeDragOver(event)"
+                                 ondrop="dropToVehicle(event, ${cIdx}, ${dIdx})"
+                                 draggable="${drv.name ? 'true' : 'false'}"
+                                 onsragstart="dragVehicleDriver(event, ${cIdx}, ${dIdx})"
+                                 id="slot-${cIdx}-${dIdx}">
+                    `;
+
+                    if (drv.name) {
+                        html += `
+                            <div class="flex items-start justify-between gap-1" draggable="true" ondragstart="dragVehicleDriver(event, ${cIdx}, ${dIdx})">
+                                <div class="cursor-grab">
+                                    <p class="font-semibold text-slate-800 text-xs">${drv.name}</p>
+                                    <p class="text-[10px] text-slate-500 font-mono">SAP: ${drv.sap || '-'}</p>
+                                </div>
+                                <div class="flex items-center space-x-1">
+                                    ${isChanged ? '<span class="bg-amber-200 text-amber-800 text-[9px] px-1 rounded font-bold">เปลี่ยน</span>' : ''}
+                                    <button onclick="removeDriverFromCar(${cIdx}, ${dIdx})" class="text-slate-400 hover:text-red-600 p-0.5" title="ถอดออก"><i class="fa-solid fa-xmark text-xs"></i></button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        html += `<div class="text-center py-1 text-slate-400 text-xs italic"><i class="fa-solid fa-plus text-[10px] mr-1"></i>ว่าง (ลากมาวาง)</div>`;
+                    }
+
+                    html += `</div></td>`;
+                }
+
+                // Reserve / Note column
+                html += `
+                    <td class="p-3 text-xs text-slate-500">
+                        <input type="text" value="${veh.reserve || ''}" onchange="updateReserveNote(${cIdx}, this.value)" placeholder="ระบุสำรอง..." class="w-full px-2 py-1 border border-slate-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    </td>
+                `;
+
+                tr.innerHTML = html;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('sap-count').innerText = sapCount;
+            renderReservePool();
+        }
+
+        function renderReservePool() {
+            const container = document.getElementById('reserve-dropzone');
+            document.getElementById('reserve-count').innerText = reservePool.length;
+            
+            if (reservePool.length === 0) {
+                container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">ไม่มีพนักงานในคลังสำรอง</div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+            reservePool.forEach((drv, rIdx) => {
+                let div = document.createElement('div');
+                div.className = "bg-white p-2.5 rounded-lg border border-slate-200 shadow-xs flex items-center justify-between cursor-grab hover:border-amber-400 transition";
+                div.draggable = true;
+                div.ondragstart = (e) => dragReserveDriver(e, rIdx);
+                div.innerHTML = `
+                    <div>
+                        <p class="font-semibold text-slate-800 text-xs">${drv.name}</p>
+                        <p class="text-[10px] text-slate-500 font-mono">SAP: ${drv.sap}</p>
+                    </div>
+                    <button onclick="deleteReserve(${rIdx})" class="text-slate-400 hover:text-red-600 p-1"><i class="fa-solid fa-trash text-xs"></i></button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        // Drag and Drop State
+        let draggedData = null;
+
+        function dragVehicleDriver(e, cIdx, dIdx) {
+            draggedData = { type: 'vehicle', cIdx, dIdx, driver: vehicles[cIdx].drivers[dIdx] };
+            e.dataTransfer.setData('text/plain', JSON.stringify(draggedData));
+        }
+
+        function dragReserveDriver(e, rIdx) {
+            draggedData = { type: 'reserve', rIdx, driver: reservePool[rIdx] };
+            e.dataTransfer.setData('text/plain', JSON.stringify(draggedData));
+        }
+
+        function allowDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function removeDragOver(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function dropToVehicle(e, targetCIdx, targetDIdx) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            if (!draggedData) return;
+
+            const targetCar = vehicles[targetCIdx];
+            const oldTargetDriver = targetCar.drivers[targetDIdx];
+
+            if (draggedData.type === 'vehicle') {
+                const srcCar = vehicles[draggedData.cIdx];
+                const srcDIdx = draggedData.dIdx;
+
+                // Swap or Move
+                targetCar.drivers[targetDIdx] = srcCar.drivers[srcDIdx];
+                srcCar.drivers[srcDIdx] = oldTargetDriver;
+
+                // Mark changes
+                changedSlots[`${targetCIdx}_${targetDIdx}`] = true;
+                if (oldTargetDriver.name) {
+                    changedSlots[`${draggedData.cIdx}_${srcDIdx}`] = true;
+                }
+
+                logSapAction(`ย้าย ${targetCar.drivers[targetDIdx].name} จากรถเบอร์ ${srcCar.carNo} มาลงรถเบอร์ ${targetCar.carNo} (พพร.${targetDIdx+1})`);
+                if (oldTargetDriver.name) {
+                    logSapAction(`สลับ/แทนที่ ${oldTargetDriver.name} ออกจากรถเบอร์ ${targetCar.carNo}`);
+                }
+
+            } else if (draggedData.type === 'reserve') {
+                // Move from reserve to vehicle
+                targetCar.drivers[targetDIdx] = draggedData.driver;
+                reservePool.splice(draggedData.rIdx, 1);
+
+                changedSlots[`${targetCIdx}_${targetDIdx}`] = true;
+                logSapAction(`นำพนักงานสำรอง ${draggedData.driver.name} (SAP: ${draggedData.driver.sap}) มาลงรถเบอร์ ${targetCar.carNo} (พพร.${targetDIdx+1})`);
+
+                if (oldTargetDriver.name) {
+                    reservePool.push(oldTargetDriver);
+                    logSapAction(`ถอด ${oldTargetDriver.name} ออกจากรถเบอร์ ${targetCar.carNo} เข้าสู่คลังสำรอง`);
+                }
+            }
+
+            draggedData = null;
+            renderApp();
+            showToast("อัปเดตตำแหน่งเรียบร้อย");
+        }
+
+        function dropToReserve(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            if (!draggedData || draggedData.type !== 'vehicle') return;
+
+            const srcCar = vehicles[draggedData.cIdx];
+            const srcDIdx = draggedData.dIdx;
+            const removedDriver = srcCar.drivers[srcDIdx];
+
+            if (!removedDriver.name) return;
+
+            srcCar.drivers[srcDIdx] = { name: "", sap: "" };
+            reservePool.push(removedDriver);
+
+            changedSlots[`${draggedData.cIdx}_${srcDIdx}`] = true;
+            logSapAction(`ถอด ${removedDriver.name} ออกจากรถเบอร์ ${srcCar.carNo} (พพร.${srcDIdx+1}) ไปยังคลังสำรอง`);
+
+            draggedData = null;
+            renderApp();
+            showToast(`ส่ง ${removedDriver.name} เข้าคลังสำรองแล้ว`);
+        }
+
+        function removeDriverFromCar(cIdx, dIdx) {
+            const drv = vehicles[cIdx].drivers[dIdx];
+            if (!drv.name) return;
+
+            vehicles[cIdx].drivers[dIdx] = { name: "", sap: "" };
+            reservePool.push(drv);
+            changedSlots[`${cIdx}_${dIdx}`] = true;
+
+            logSapAction(`ถอด ${drv.name} ออกจากรถเบอร์ ${vehicles[cIdx].carNo} ไปยังคลังสำรอง`);
+            renderApp();
+            showToast(`นำ ${drv.name} ออกจากรถแล้ว`);
+        }
+
+        function addReserveDriver() {
+            const nameInput = document.getElementById('new-reserve-name');
+            const sapInput = document.getElementById('new-reserve-sap');
+            if (!nameInput.value.trim()) return;
+
+            reservePool.push({ name: nameInput.value.trim(), sap: sapInput.value.trim() || '-' });
+            nameInput.value = '';
+            sapInput.value = '';
+            renderApp();
+            showToast("เพิ่มพนักงานสำรองสำเร็จ");
+        }
+
+        function deleteReserve(rIdx) {
+            reservePool.splice(rIdx, 1);
+            renderApp();
+            showToast("ลบพนักงานออกจากคลังสำรองแล้ว");
+        }
+
+        function updateReserveNote(cIdx, val) {
+            vehicles[cIdx].reserve = val;
+        }
+
+        function clearAllHighlights() {
+            changedSlots = {};
+            sapLogs = [];
+            renderApp();
+            showToast("ล้างไฮไลท์และประวัติทั้งหมดแล้ว");
+        }
+
+        function logSapAction(text) {
+            sapLogs.push({ time: new Date().toLocaleTimeString(), text });
+        }
+
+        // SAP Guide Modal
+        function openSapGuideModal() {
+            const container = document.getElementById('sap-steps-container');
+            if (sapLogs.length === 0) {
+                container.innerHTML = `<div class="text-center py-12 text-slate-400">ยังไม่มีการเปลี่ยนแปลงข้อมูลในรอบนี้</div>`;
+            } else {
+                container.innerHTML = `<ol class="space-y-3">` + sapLogs.map((log, idx) => `
+                    <li class="bg-slate-50 border border-slate-200 p-3 rounded-xl flex items-start space-x-3 text-sm">
+                        <span class="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0">${idx + 1}</span>
+                        <div class="flex-grow">
+                            <p class="text-slate-800 font-medium">${log.text}</p>
+                            <span class="text-[10px] text-slate-400">บันทึกเวลา: ${log.time}</span>
+                        </div>
+                    </li>
+                `).join('') + `</ol>`;
+            }
+            document.getElementById('sap-modal').classList.remove('hidden');
+        }
+
+        function closeSapGuideModal() {
+            document.getElementById('sap-modal').classList.add('hidden');
+        }
+
+        function copySapSteps() {
+            const text = sapLogs.map((l, i) => `${i+1}. ${l.text}`).join('\n');
+            navigator.clipboard.writeText(text);
+            showToast("คัดลอกคู่มือ SAP เรียบร้อย!");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        // Excel Export
+        function exportExcel() {
+            let data = vehicles.map(v => ({
+                "สังกัด": v.org,
+                "เบอร์รถ": v.carNo,
+                "TW": v.tw,
+                "ทะเบียน": v.plate,
+                "ชื่อพพร.1": v.drivers[0].name,
+                "รหัส SAP 1": v.drivers[0].sap,
+                "ชื่อพพร.2": v.drivers[1].name,
+                "รหัส SAP 2": v.drivers[1].sap,
+                "ชื่อพพร.3": v.drivers[2].name,
+                "รหัส SAP 3": v.drivers[2].sap,
+                "สำรอง": v.reserve
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(data);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "DriverAssignment");
+            XLSX.writeFile(workbook, "Driver_Assignment_Report.xlsx");
+            showToast("ดาวน์โหลดไฟล์ Excel สำเร็จ");
+        }
+
+        // Excel Import
+        function importExcel(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(firstSheet);
+
+                    vehicles = rows.map(r => ({
+                        org: r["สังกัด"] || "",
+                        carNo: String(r["เบอร์รถ"] || ""),
+                        tw: r["TW"] || "",
+                        plate: r["ทะเบียน"] || "",
+                        drivers: [
+                            { name: r["ชื่อพพร.1"] || "", sap: String(r["รหัส SAP 1"] || r["รหัส SAP"] || "") },
+                            { name: r["ชื่อพพร.2"] || "", sap: String(r["รหัส SAP 2"] || "") },
+                            { name: r["ชื่อพพร.3"] || "", sap: String(r["รหัส SAP 3"] || "") }
+                        ],
+                        reserve: r["สำรอง"] || ""
+                    }));
+
+                    initOrgFilter();
+                    renderApp();
+                    showToast("นำเข้าข้อมูล Excel สำเร็จ!");
+                } catch (err) {
+                    alert("รูปแบบไฟล์ไม่ถูกต้อง กรุณาใช้ไฟล์ Excel ที่มีหัวคอลัมน์ตรงตามระบบ");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    </script>
+</body>
+</html>
